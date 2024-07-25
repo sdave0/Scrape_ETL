@@ -8,7 +8,38 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ETL:
+    """
+    A class to represent an ETL (Extract, Transform, Load) process for toll plaza data.
+
+    Attributes:
+    -----------
+    plaza_id : str
+        The ID of the toll plaza to extract data for.
+    sql_file_path : str
+        The path to the SQLite database file.
+    sql_table_name : str
+        The name of the table in the SQLite database where data will be loaded.
+    url : str
+        The URL to fetch the toll plaza data from.
+    soup : BeautifulSoup
+        The BeautifulSoup object to parse the fetched HTML content.
+    df_info : pandas.DataFrame
+        The DataFrame to store the transformed data.
+    """
+
     def __init__(self, plaza_id, sql_file_path, sql_table_name):
+        """
+        Constructs all the necessary attributes for the ETL object.
+
+        Parameters:
+        -----------
+        plaza_id : str
+            The ID of the toll plaza to extract data for.
+        sql_file_path : str
+            The path to the SQLite database file.
+        sql_table_name : str
+            The name of the table in the SQLite database where data will be loaded.
+        """
         self.plaza_id = plaza_id
         self.sql_file_path = sql_file_path
         self.sql_table_name = sql_table_name
@@ -17,6 +48,14 @@ class ETL:
         self.df_info = pd.DataFrame()
 
     def extract(self):
+        """
+        Extracts data from the URL for the given plaza ID.
+
+        Returns:
+        --------
+        bool
+            True if data was successfully extracted, False otherwise.
+        """
         try:
             r = requests.get(self.url)
             self.soup = BeautifulSoup(r.text, 'html.parser')
@@ -30,6 +69,9 @@ class ETL:
             return False
 
     def transform(self):
+        """
+        Transforms the extracted data into a pandas DataFrame.
+        """
         try:
             plaza_name = self.soup.find(class_='PA15').find_all('p')[0].find('label')
             table_html = str(self.soup.find_all('table', class_='tollinfotbl')[0])
@@ -47,6 +89,9 @@ class ETL:
             logging.error(f'Error transforming data for Plaza ID: {self.plaza_id} - {e}')
 
     def load(self):
+        """
+        Loads the transformed data into the specified SQLite database.
+        """
         try:
             with sqlite3.connect(self.sql_file_path) as conn:
                 self.df_info.to_sql(self.sql_table_name, conn, if_exists='append', index=False)
@@ -55,6 +100,9 @@ class ETL:
             logging.error(f'Error loading data for Plaza ID: {self.plaza_id} - {e}')
 
     def run_etl(self):
+        """
+        Runs the ETL process: extract, transform, and load the data.
+        """
         if self.extract():
             self.transform()
             self.load()
